@@ -465,7 +465,7 @@ ggplot(detection_site, aes(x = site, y = detection_count, fill = conservancy)) +
 
 #Table of Detections
 
-# Step 1: Create the base table with call counts per conservancy (only where presence == 1)
+#Create the base table with call counts per conservancy (only where presence == 1)
 calls_per_conservancy <- data %>%
   filter(Presence == 1) %>%  # Filter for presence == 1
   mutate(conservancy = str_extract(site, "^[A-Za-z]+")) %>%
@@ -473,7 +473,7 @@ calls_per_conservancy <- data %>%
   group_by(conservancy) %>%
   summarise(call_count = n(), .groups = "drop")
 
-# Step 2: Calculate the call count per Cluster_32PCs and Species (guild), and the percentages
+#Calculate the call count per Cluster_32PCs and Species (guild), and the percentages
 calls_with_percentages <- data %>%
   filter(Presence == 1) %>%  # Filter for presence == 1
   mutate(conservancy = str_extract(site, "^[A-Za-z]+")) %>%
@@ -483,7 +483,7 @@ calls_with_percentages <- data %>%
   left_join(calls_per_conservancy, by = "conservancy") %>%
   mutate(percentage = (call_count_per_cluster_guild / call_count) * 100)
 
-# Step 3: Aggregate the percentages by guild (Clutter, Edge, Open)
+#Aggregate the percentages by guild (Clutter, Edge, Open)
 guild_percentages <- calls_with_percentages %>%
   group_by(conservancy, guild) %>%
   summarise(guild_percentage = sum(percentage), .groups = "drop") %>%
@@ -492,19 +492,19 @@ guild_percentages <- calls_with_percentages %>%
 
 head(calls_with_percentages)
 
-# Step 4: Aggregate the cluster counts (0, 1, 2, ..., 6) and convert to percentages
+# Aggregate the cluster counts (0, 1, 2, ..., 6) and convert to percentages
 cluster_counts <- calls_with_percentages %>%
   group_by(conservancy, Cluster_32PCs) %>%
   summarise(cluster_count = sum(call_count_per_cluster_guild) / first(call_count) *100, .groups = "drop") %>%
   spread(key = Cluster_32PCs, value = cluster_count, fill = 0) %>%
   select(conservancy, '0', '1', '3', '5', '6')
 
-# Step 5: Combine guild percentages and cluster counts into a single table
+#Combine guild percentages and cluster counts into a single table
 combined_table <- left_join(calls_per_conservancy, guild_percentages, by = "conservancy") %>%
   left_join(cluster_counts, by = "conservancy") %>%
   mutate(across(Clutter:`6`, ~ round(.x, 2)))  # Optionally round percentages and counts
 
-# Step 6: Convert to flextable and format the columns
+#Convert to flextable and format the columns
 calls_per_conservancy_flex <- flextable(combined_table)
 
 # Renaming the columns for clarity
@@ -522,11 +522,11 @@ calls_per_conservancy_flex <- set_header_labels(calls_per_conservancy_flex,
                                                 `5` = "Cluster 5 %", 
                                                 `6` = "Cluster 6 %")
 
-# Step 7: Set the column widths (adjust these as needed)
+#Set the column widths (adjust these as needed)
 calls_per_conservancy_flex <- set_table_properties(calls_per_conservancy_flex, 
                                                    width = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
 
-# Step 8: Display the updated table
+#Display the updated table
 calls_per_conservancy_flex
 
 
