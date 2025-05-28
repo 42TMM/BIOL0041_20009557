@@ -29,17 +29,15 @@ bat_data <- bat_data %>%
 bat_data <- bat_data %>%
   mutate(conservancy = str_extract(site, "^[A-Za-z]+"))
 
-#Calculating lunar illumination for each site
+#calculating lunar illumination for each site
 library(lunar)
 bat_data$date <- as.Date(bat_data$date, format="%Y-%m-%d")
 bat_data$lunar_illumination <- lunar.illumination(bat_data$date)
 
-# Step 2: Extract call count
 bat_call_counts <- bat_data %>%
   group_by(site, date) %>%
   summarise(Call_Count = n(), .groups = "drop")
 
-# Step 3: Merge with covariates 
 covariates <- read.csv("AM_covs.csv")
 covs_numeric<-covariates[ , c(5, 14, 19, 34, 35, 36)]
 covs_numeric$cattle_30min_event_rate[is.na(covs_numeric$cattle_30min_event_rate)] <- 0
@@ -71,14 +69,14 @@ bat_call_counts$lunar_illumination <- lunar.illumination(bat_call_counts$date)
 
 
 
-# Step 4: Fit Poisson GLMM #REMOVED CONSERVANCY AS LIKELY MASKING PATTERNS
+#fit Poisson GLMM
 poisson_model <- glmer(Call_Count ~ cattle_30min_event_rate + shoat_30min_event_rate + Mean.savi +
                          propopen500m + waterdist_short + humdist_short + lunar_illumination + 
                          (1|site) + (1|date),
                        data = bat_call_counts, family = poisson)
 summary(poisson_model)
 
-# Step 5: Fit Negative Binomial GLMM #REMOVED CONSERVANCY AS LIKELY MASKING PATTERNS
+#fit Negative Binomial GLMM #REMOVED CONSERVANCY AS LIKELY MASKING PATTERNS
 nb_model <- glmmTMB(Call_Count ~ cattle_30min_event_rate + shoat_30min_event_rate + Mean.savi +
                       propopen500m + waterdist_short + humdist_short + lunar_illumination + 
                       (1|site) + (1|date), 
@@ -89,7 +87,7 @@ summary(nb_model)
 
 AIC(poisson_model, nb_model)
 
-# Step 6: Model diagnostics
+#model diagnostics
 simulation_poisson <- simulateResiduals(poisson_model)
 simulation_nb <- simulateResiduals(nb_model)
 
@@ -97,20 +95,6 @@ plot(simulation_poisson)  # Check Poisson model residuals
 
 plot(simulation_nb)  # Check NB model residuals
 
-#Having added in lunar illumination and conservancy as a fixed factor the 
-#binomial model is now very nice...
-
-
-#NB model selected because: 
-#All_bats = good 
-#Cluster_0 is good
-#Cluster 1 is good
-#Cluster 2 is good
-#Cluster 3 is good 
-#Cluster 4 is good 
-#Cluster 5 is good 
-#Cluster 6 is good 
-#but in poisson many are less good 
 
 #################################################################################################################
 
@@ -119,12 +103,10 @@ plot(simulation_nb)  # Check NB model residuals
 bat_data_species <- filter(bat_data, Cluster_32PCs == "6")
 
 
-# Step 2: Extract call count
 bat_call_counts <- bat_data_species %>%
   group_by(site, date) %>%
   summarise(Call_Count = n(), .groups = "drop")
 
-# Step 3: Merge with covariates 
 covariates <- read.csv("covariates_2018_livestockrates_min2crops_30min_min3_threshold09_md09.csv")
 covs_numeric<-covariates[ , c(7, 15, 19, 37, 43, 46)]
 covs_numeric$cattle_30min_event_rate[is.na(covs_numeric$cattle_30min_event_rate)] <- 0
@@ -148,14 +130,14 @@ bat_call_counts$date <- as.Date(bat_call_counts$date, format="%Y-%m-%d")
 bat_call_counts$lunar_illumination <- lunar.illumination(bat_call_counts$date)
 
 
-# Step 4: Fit Poisson GLMM
+#Fit Poisson GLMM
 poisson_model <- glmer(Call_Count ~ (1 | site) + cattle_30min_event_rate + shoat_30min_event_rate + Mean.savi + 
                          propopen500m + waterdist_short + humdist_short + lunar_illumination +
                          (1|date), 
                        data = bat_call_counts, family = poisson)
 summary(poisson_model)
 
-# Step 5: Fit Negative Binomial GLMM
+#Fit Negative Binomial GLMM
 nb_model <- glmmTMB(Call_Count ~ cattle_30min_event_rate + shoat_30min_event_rate + Mean.savi +
                       propopen500m + waterdist_short + humdist_short + lunar_illumination + factor(conservancy) +
                       (1|site) + (1|date), 
@@ -165,7 +147,7 @@ summary(nb_model)
 
  AIC(poisson_model, nb_model)
 
-# Step 6: Model diagnostics 
+#Model diagnostics 
 simulation_poisson <- simulateResiduals(poisson_model)
 simulation_nb <- simulateResiduals(nb_model)
 
@@ -177,32 +159,6 @@ plot(simulation_nb)
 
 
 #################################################################################################################
-
-#For cluster 0 activity increases with humdist_short although these error messages:
-  #Warning message:
-    #In finalizeTMB(TMBStruc, obj, fit, h, data.tmb.old) :
-     #Model convergence problem; non-positive-definite Hessian matrix. See vignette('troubleshooting')
-
-  #boundary (singular) fit: see help('isSingular')
-
-#For cluster 1 no significant results except site, no error messages
-
-#For cluster 2 activity increases with cattle grazing and distance to water although this error message: 
-  #boundary (singular) fit: see help('isSingular')
-
-#For cluster 3 activity increases with waterdist_short, no error messages
-
-#For cluster 4 activity negatively correlated with shoat grazing and positively with humdist_short although this error message:
-  #boundary (singular) fit: see help('isSingular')
-
-#For cluster 5 activity negatively correlated with shoat grazing and positively with humdist_short although this error message:
-  #boundary (singular) fit: see help('isSingular')
-
-    #dropping columns from rank-deficient conditional model: cattle_30min_event_rate, shoat_30min_event_rate, propopen500m, waterdist_short, humdist_short
-    #Warning message:
-      #In finalizeTMB(TMBStruc, obj, fit, h, data.tmb.old) :
-      #Model convergence problem; non-positive-definite Hessian matrix. See vignette('troubleshooting')
-
 #################################################################################################################
 
 #Plotting effects
@@ -331,15 +287,12 @@ grid.arrange(pred_structdist, pred_waterdist, pred_propopen,
               for(guild_id in c("Edge", "Clutter", "Open")) {
                 cat(paste("Processing guild", guild_id, "\n"))
                 
-                # Step 1: Filter data for the current guild
                 bat_data_species <- filter(bat_data, guild == as.character(guild_id))
                 
-                # Step 2: Extract call count
                 bat_call_counts <- bat_data_species %>%
                   group_by(site, date) %>%
                   summarise(Call_Count = n(), .groups = "drop")
                 
-                # Step 3: Merge with covariates
                 covariates <- read.csv("covariates_2018_livestockrates_min2crops_30min_min3_threshold09_md09.csv")
                 covs_numeric <- covariates[, c(7, 15, 19, 37, 43, 46)]  # Selected columns including Mean.savi
                 
